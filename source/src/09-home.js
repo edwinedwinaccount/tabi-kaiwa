@@ -6,7 +6,7 @@ function renderOnboard(m){
   const pk=el("div","pick");Object.keys(CHARS).forEach(id=>{const c=CHARS[id];const x=btn(null,null,()=>{ONB.char=id;render();},"pick-"+id);x.setAttribute("aria-pressed",String(ONB.char===id));
     const d=el("div");d.innerHTML=charSVG(id,{level:3});x.append(d.firstChild,el("b",null,c.k),el("span",null,c.name),el("span",null,c.blurb));pk.append(x);});
   b.append(pk);
-  const lab=el("label",null,"Your first name, for introductions (optional)");const inp=el("input",null,null,{id:"onbName",type:"text",placeholder:"Type it as it sounds, e.g. e-do-wi-n",autocapitalize:"off",autocomplete:"off"});inp.value=ONB.name;
+  const lab=el("label",null,"Your first name, for introductions (optional)");const inp=el("input",null,null,{id:"onbName",type:"text",placeholder:"Type it as it sounds, e.g. sa-ra",autocapitalize:"off",autocomplete:"off"});inp.value=ONB.name;
   const prev=el("div","note",ONB.name?"In katakana: "+nameKana(ONB.name):"");inp.addEventListener("input",()=>{ONB.name=inp.value;prev.textContent=inp.value?"In katakana: "+nameKana(inp.value):"";});lab.append(inp);b.append(lab,prev);
   t.append(b);const f=el("div","foot");const go=btn("btn primary wide","Start",()=>{S.char=ONB.char;S.name=nameKana(ONB.name);save();render();},"onbStart");go.disabled=!ONB.char;f.append(go);t.append(f);m.append(t);
   m.append(el("p","note","Everything you do here is saved on this device only. Nothing is uploaded."));}

@@ -8,7 +8,7 @@ function renderSettings(m){backHead(m,"せってい","Settings");
   b.append(pk);t.append(b);m.append(t);
   // about you
   t=el("div","ticket");hd=el("div","head");hd.append(el("span",null,"Your trip"),el("span",null,"Stays on this device"));t.append(hd);b=el("div","body");
-  const name=el("input",null,null,{id:"setName",type:"text",autocapitalize:"off",autocomplete:"off",placeholder:"e.g. e-do-wi-n, or エドウィン"});name.value=S.name;
+  const name=el("input",null,null,{id:"setName",type:"text",autocapitalize:"off",autocomplete:"off",placeholder:"e.g. sa-ra, or サラ"});name.value=S.name;
   const nprev=el("span","note",S.name?"Used as: "+S.name:"");name.addEventListener("change",()=>{S.name=nameKana(name.value);name.value=S.name;nprev.textContent=S.name?"Used as: "+S.name:"";save();});
   const nl=field("Your first name, for introductions",name);nl.append(nprev);b.append(nl);
   const grp=el("input",null,null,{id:"setGroup",type:"number",min:"1",max:"20",inputmode:"numeric"});grp.value=S.group;grp.addEventListener("change",()=>{S.group=Math.max(1,Math.min(20,parseInt(grp.value,10)||1));save();});
