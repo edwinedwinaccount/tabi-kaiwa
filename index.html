@@ -402,9 +402,23 @@ let jaVoice=null;
 function loadVoices(){try{const vs=speechSynthesis.getVoices().filter(v=>v.lang&&v.lang.toLowerCase().replace("_","-").indexOf("ja")===0);
   jaVoice=vs.find(v=>/kyoko|o-ren|otoya|hattori/i.test(v.name)&&/enhanced|premium/i.test(v.name))||vs.find(v=>v.localService)||vs[0]||null;}catch(e){}}
 if(canSpeak){loadVoices();try{speechSynthesis.addEventListener("voiceschanged",loadVoices);}catch(e){}}
-function speak(text,rate){if(!canSpeak)return;try{speechSynthesis.cancel();
-  const u=new SpeechSynthesisUtterance(String(text).replace(/\s+/g,"").replace(/〇〇/g,"なになに").replace(/＿/g,""));
-  u.lang="ja-JP";u.rate=rate||S.rate||0.85;if(!jaVoice)loadVoices();if(jaVoice)u.voice=jaVoice;speechSynthesis.speak(u);}catch(e){}}
+// iPhone Safari's speech engine can get stuck: after the mic has been used, after the tab sleeps,
+// or when a speak() lands straight after cancel(). So: wait a beat, check it actually started, retry once
+// with the plain system voice, and tell the user if it still won't play.
+let speakTimer=null,speakWatch=null,lastMicEnd=0,stuckWarned=false;
+function soundStuck(){if(stuckWarned)return;stuckWarned=true;toast("Sound isn't playing. Check the volume and the silent switch, then close and reopen this tab.");}
+function speak(text,rate,retry){if(!canSpeak)return;const s=speechSynthesis;clearTimeout(speakTimer);clearTimeout(speakWatch);
+  const say=()=>{try{s.resume();
+    const u=new SpeechSynthesisUtterance(String(text).replace(/\s+/g,"").replace(/〇〇/g,"なになに").replace(/＿/g,""));
+    u.lang="ja-JP";u.rate=rate||S.rate||0.85;if(!retry){if(!jaVoice)loadVoices();if(jaVoice)u.voice=jaVoice;}
+    let started=false;u.onstart=()=>{started=true;stuckWarned=false;clearTimeout(speakWatch);};
+    s.speak(u);
+    speakWatch=setTimeout(()=>{if(started)return;try{s.cancel();}catch(e){}if(!retry)speakTimer=setTimeout(()=>speak(text,rate,true),150);else soundStuck();},2000);
+  }catch(e){}};
+  let wait=0;try{if(s.speaking||s.pending){s.cancel();wait=150;}}catch(e){}
+  const sinceMic=Date.now()-lastMicEnd;if(sinceMic<700)wait=Math.max(wait,700-sinceMic);
+  if(wait)speakTimer=setTimeout(say,wait);else say();}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&canSpeak){try{speechSynthesis.cancel();}catch(e){}loadVoices();}});
 function listenBtn(text,label){const b=btn("listen",label||"▶ LISTEN",e=>{e.stopPropagation();speak(typeof text==="function"?text():text);});b.hidden=!canSpeak;return b;}
 
 /* ===================== SPEECH IN ===================== */
@@ -425,8 +439,8 @@ function listen(cb){
   r.onresult=e=>{let t="";alts=[];for(let i=0;i<e.results.length;i++)t+=e.results[i][0].transcript;
     if(e.results.length===1){const r0=e.results[0];for(let j=0;j<r0.length;j++)alts.push(r0[j].transcript);}
     last=t;if(cb.interim)cb.interim(t);};
-  r.onerror=e=>{if(done)return;if(e.error==="no-speech"||e.error==="aborted")return;done=true;cb.error(e.error||"unknown");};
-  r.onend=()=>{if(done)return;done=true;const t=last.trim();if(t)cb.final(t,alts.length?alts:[t]);else cb.error("empty");};
+  r.onerror=e=>{lastMicEnd=Date.now();if(done)return;if(e.error==="no-speech"||e.error==="aborted")return;done=true;cb.error(e.error||"unknown");};
+  r.onend=()=>{lastMicEnd=Date.now();if(done)return;done=true;const t=last.trim();if(t)cb.final(t,alts.length?alts:[t]);else cb.error("empty");};
   try{r.start();}catch(e){cb.error("start-failed");return null;}
   return {stop(){try{r.stop();}catch(e){}},abort(){done=true;try{r.abort();}catch(e){}}};}
 // A mic button: tap to start, tap again to finish.
